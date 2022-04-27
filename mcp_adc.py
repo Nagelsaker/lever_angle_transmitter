@@ -4,20 +4,32 @@ log_format = "%(levelname)s | %(asctime)-15s | %(message)s"
 logging.basicConfig(format=log_format, level=logging.DEBUG)
 import RPi.GPIO as GPIO
 import time
+import socket
 import spidev
 
-def transmit(value):
+def transmit(value, sock, ip, port, freq):
     '''
     Transmit value over UDP
     '''
-    pass
+    message = bytes(f"{value}", "utf-8")
+    try:
+        sock.sendto(message, (ip,port))
+    except:
+        pass
+    time.sleep(1/freq)
 
 def main():
+    # Setup UDP connection
+    DST_IP = "10.42.0.1"
+    DST_PORT = 20000
+    sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+    freq = 10 # Hz
+    
     # SPI
-    min_angle = -90
-    max_angle = 90
-    min_val = 0
-    max_val = 499
+    min_angle = -96
+    max_angle = 98
+    min_val = 14 #50
+    max_val = 114 #450
     bus = 0
     device = 0
     n = 10
@@ -32,15 +44,16 @@ def main():
     try:
         while True:
             out = spi.readbytes(2)
-            b1 = int(bin(out[0] << 4),2)
+            b1 = int(bin(out[0] << 2),2)
             b2 = int(bin(out[1])[:4],2)
             val = int(bin(b1 | b2),2)
             
-            angle = np.deg2rad(val / max_val * (max_angle-min_angle) + min_angle)
-            transmit(angle)
-            print(f"val:\t{val}\t\tangle:\t{angle}")
+            angle = np.deg2rad((val - min_val)/ (max_val-min_val) * (max_angle-min_angle) + min_angle)
+            transmit(angle, sock, DST_IP, DST_PORT, freq)
+            print(f"bits:\t{bin(b1 | b2)}\tval:\t{val}\t\tangle:\t{np.rad2deg(angle)}")
     except KeyboardInterrupt:        
         spi.close()
+        sock.close()
 
 if __name__ == "__main__":
     main()
