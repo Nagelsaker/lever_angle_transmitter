@@ -28,8 +28,8 @@ def main():
     # SPI
     min_angle = -96
     max_angle = 98
-    min_val = 14 #50
-    max_val = 114 #450
+    min_val = 124 #50
+    max_val = 917 #450
     bus = 0
     device = 0
     n = 10
@@ -43,14 +43,15 @@ def main():
     
     try:
         while True:
-            out = spi.readbytes(2)
-            b1 = int(bin(out[0] << 2),2)
-            b2 = int(bin(out[1])[:4],2)
+            out = spi.readbytes(4)
+            b1 = int(bin(out[0] << 5),2)
+            b2 = int(bin(out[1])[:7],2)
+            b3 = int(bin(out[2]),2)
             val = int(bin(b1 | b2),2)
             
             angle = np.deg2rad((val - min_val)/ (max_val-min_val) * (max_angle-min_angle) + min_angle)
             transmit(angle, sock, DST_IP, DST_PORT, freq)
-            print(f"bits:\t{bin(b1 | b2)}\tval:\t{val}\t\tangle:\t{np.rad2deg(angle)}")
+            print(f"bits:\t{bin(b1 | b2)}\tangle: {angle}\tval:\t{int(bin(b1 | b2),2)}")
     except KeyboardInterrupt:        
         spi.close()
         sock.close()
